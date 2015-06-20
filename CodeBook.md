@@ -24,28 +24,29 @@ Finally a Fast Fourier Transform (FFT) was applied to some of these signals prod
 
 These signals were used to estimate variables of the feature vector for each pattern:  
 '-XYZ' is used to denote 3-axial signals in the X, Y and Z directions.
-
-tBodyAcc-XYZ
-tGravityAcc-XYZ
-tBodyAccJerk-XYZ
-tBodyGyro-XYZ
-tBodyGyroJerk-XYZ
-tBodyAccMag
-tGravityAccMag
-tBodyAccJerkMag
-tBodyGyroMag
-tBodyGyroJerkMag
-fBodyAcc-XYZ
-fBodyAccJerk-XYZ
-fBodyGyro-XYZ
-fBodyAccMag
-fBodyAccJerkMag
-fBodyGyroMag
-fBodyGyroJerkMag
+<ol>
+<li>tBodyAcc-XYZ</li>
+<li>tGravityAcc-XYZ</li>
+<li>tBodyAccJerk-XYZ</li>
+<li>tBodyGyro-XYZ</li>
+<li>tBodyGyroJerk-XYZ</li>
+<li>tBodyAccMag</li>
+<li>tGravityAccMag</li>
+<li>tBodyAccJerkMag</li>
+<li>tBodyGyroMag</li>
+<li>tBodyGyroJerkMag</li>
+<li>fBodyAcc-XYZ</li>
+<li>fBodyAccJerk-XYZ</li>
+<li>fBodyGyro-XYZ</li>
+<li>fBodyAccMag</li>
+<li>fBodyAccJerkMag</li>
+<li>fBodyGyroMag</li>
+<li>fBodyGyroJerkMag</li>
+</ol>
 
 The set of variables that are included in this data frame come from taking the mean of the data estimates that came from applying following estimates on the raw signal data: 
 
-mean(): Mean value
-std(): Standard deviation
+<li>mean(): Mean value</li>
+<li>std(): Standard deviation</li>
 
 
