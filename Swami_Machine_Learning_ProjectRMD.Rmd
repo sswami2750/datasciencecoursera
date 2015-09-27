@@ -1,0 +1,124 @@
+---
+title: "Prediction of Class Type in Health Data from Fitbit, Jawbone Up, etc"
+author: "Dr. Sumanth Swaminathan"
+date: "September 27, 2015"
+output: html_document
+---
+  
+## Introduction
+  
+  This report includes an execution of a machine learning algorithm designed to predict the manor in which a sample of exercisers conducted their workout.  The specific goal of the study is to design an algorithm that is most predictive of workout "classe" as a function of the different exercise variables.  
+
+## Basic Exploratory Analysis & cleaning
+
+The first step was to clean the data a bit and work with it.  To that end, we removed the columns that had "NA" values (note that there were many of these).  
+Next, we did a bit of exploratory analysis and took a look at trends between the classe variable and some of the remaining variables (note that the code only includes the snapshot plots for variables that were found to be most important). Two plots of pairwise plots between 1) class and the variables with the arm label and 2) class and the variables with the belt heading are shown below.  These are meant to motivate the fact that we chose variables in our prediction algorithm with labels that include the phrases "arm" and "belt""
+
+```{r, echo=FALSE}
+library(AppliedPredictiveModeling)
+library(caret)
+library(ElemStatLearn)
+library(pgmm)
+library(rpart)
+library(randomForest)
+  
+TrainSet <- read.csv("pml-training.csv", na.strings=c("", "NA", "NULL"))
+TestSet <- read.csv("pml-testing.csv", na.strings=c("", "NA", "NULL"))
+
+#Clean Data a bit
+
+#Remove the columns that have NAs (note that the same column filtering is applied to the test set)
+dftrain<-TrainSet[,colSums(is.na(TrainSet))==0]
+dftest<-TestSet[,colSums(is.na(TrainSet))==0]
+
+#Some Exploratory Analysis
+featurePlot(x=dftrain$class,y=dftrain[,15:20],plot="pairs") #variables with belt in title
+#dfeaturePlot(x=dftrain$class,y=dftrain[,80:85],plot="pairs") #variables with arm in title
+featurePlot(x=dftrain$class,y=dftrain[,35:40],plot="pairs") #variables with dumbbell in title
+#Analysis tends to indicate that variables with "arm" and "belt", tend to be the most relevant
+
+```
+
+A cursory look at some of the pairwise plots shows more significant relationships between the class and several variables including
+  a) belt variables (pitch, roll, total accel)
+  b) arm variables (forearm, arm)
+  
+## Sampling and Prediction algorithm
+
+The next few steps included the following:
+
+1) Revising the training and testing data sets to include only the arm and belt based variables which left a table of dimension [19622,60].  Hence, we use 60 variables in our prediction
+2) We took 1 full random sample with replacement from the rows of the training set to train a prediction algorithm.  We then took another complete random sampling with prediction to be a comparison set in order to do cross validation.  
+3) The prediction algorithm chosen for this report was the random forest algorithm with 60 variable predictors
+
+```{r}
+#Subsetting schemes
+
+armvars=grep("arm", names(dftrain))
+beltvars=grep("belt", names(dftrain))
+dumbbellvars=grep("dumbbell", names(dftrain))
+
+#Try two schemes on 3 subsets of the data
+# scheme 1: random forest on class vs all arm and belt variables
+# scheme 2: random forest on class vs all arm and dumbbell variables
+
+SS = round(dim(dftrain)[1])
+
+set.seed(34675)
+Samp1=round(SS*runif(SS))
+set.seed(34676)
+Samp2=round(SS*runif(SS))
+#set.seed(34677)
+#Samp3=round(SS*runif(SS))
+
+#Initialize training samples for each case
+trainsamp1a=droplevels(dftrain[Samp1,c(armvars,beltvars,60)])
+testsample1a=droplevels(dftest[,c(armvars,beltvars,60)])
+
+trainsamp2a=droplevels(dftrain[Samp2,c(armvars,beltvars,60)])
+```
+
+#### Run the Random Forest Algorithm and Estimate the out of sample error.
+The code below shows the first generation of the predictive random forest model using the first randomly sampled data set ("trainsample1a"") from the training data set ("dftrain").  Also included in the output is the table showing the class error in the prediction as well as the class error computed after using the algorithm as a prediction for the second data set (trainsample2a).
+
+```{r}
+set.seed(34680)
+samp1apredict=randomForest(as.factor(classe)~.,data=trainsamp1a,mtry=3,importance=TRUE)
+print(samp1apredict)
+samp1apred = as.character(predict(samp1apredict,trainsamp2a))
+samp1table=table(samp1apred,trainsamp2a$classe)
+
+#Print Error Estimates and prediction table
+print(samp1table)
+classerrorA=(sum(samp1table[1:5])-samp1table[1])/samp1table[1]
+print(classerrorA)
+classerrorB=(sum(samp1table[6:10])-samp1table[7])/samp1table[7]
+print(classerrorB)
+classerrorC=(sum(samp1table[11:15])-samp1table[13])/samp1table[13]
+print(classerrorC)
+classerrorD=(sum(samp1table[16:20])-samp1table[19])/samp1table[19]
+print(classerrorD)
+classerrorE=(sum(samp1table[21:25])-samp1table[25])/samp1table[25]
+print(classerrorE)
+
+#Submission Code
+
+# Do final prediction on testing set and write prediction to text files
+
+#FinalPred = as.character(predict(samp1apredict,testsample1a))
+#pml_write_files(FinalPred)
+
+```
+
+An important point to note is that the class errors are extremely small in both cases, so while it is normally the case that the out of sample error is larger than the in sample error, in this case the errors are so small that the difference is not terribly noticeable.  The final step was to run the predictor on the testing sample and submit
+
+## Analysis & Conclusions
+
+The purpose of this exercise was to create a good predictive algorithm for exercise type in a messy data set with a huge amount of information.  In the end, the following was achieved: 
+  
+1) The data set was cleaned, visualized, and reduced from a 160 variable data set to a 60 variable data set
+2) Cross validation was done by breaking the training set into multiple sets in order to train the predictor.  
+3) the Random Forest algorithm runs in less than a minute and generated a predictive model with class errors all below 1 percent in all categories.  
+4) **When the algorithm was execusted on the test set, all 20 records were predicted correctly.**  
+
+In short, it appears that we have a decent algorithm that has been executed fast and accurately for this particular project.  
