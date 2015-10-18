@@ -1,0 +1,107 @@
+---
+title: "Analysis of Consumer Walking Habits from Fit Bit Technology Data Set"
+author: "Dr. Sumanth Swaminathan"
+date: "October 18, 2015"
+output: html_document
+---
+  
+## Introduction
+  
+  This study is meant to answer basic questions about the movement habits of populations who monitor their daily steps using devices such as fitbit, Nike Fuelband, or Jawbone Up.  We present a basic exploratory data analysis with accompanying visualization and answer the following questions:
+  
+  1) What is the mean total number of steps taken per day ignoring missing data
+  2) What is the pattern of daily step habits and the time of day when the average number of steps taken are a maximum. 
+  3) What is the difference in consumer walking habits between weekdays and weekends. 
+
+## Analysis and Visualization 
+
+The data set used for this study is collected from Fit Bit, Jawbone Up, and Nike Fuelband devices.  The specific variables included in the data set are "steps"" taken, 5 minute time "interval" of collection, and "date" collected.  More information as well as the original data set can be found in the following Github Repo: https://github.com/rdpeng/RepData_PeerAssessment1.  **Note that all data on steps are rounded after calculations as fractional steps are not of interest in this report.**
+
+### Mean Total Number of Steps Taken per Day
+
+We start by reading the data into R and removing missing entries (indicated by "NA").  Next, we calculate the total steps taken on each particular date and average the results to find the average total steps taken per day.  Finally, a histogram of the Total Daily Step data is presented.  Calculations as well as the accompanying histogram are shown below.
+
+```{r, echo=TRUE}
+
+library(timeDate)
+library(plyr)
+library(ggplot2)
+library(lattice)
+
+masterdata=read.csv("activity.csv") #load data
+masterdatanew=masterdata #copy of masterdata
+
+#Part 1: Calculate mean number of daily steps
+
+Dfnew = masterdata[!is.na(masterdata$steps),] #Apply mean function to data set by unique day
+Dfsteptot=ddply(Dfnew,~date,summarise,totsteps=sum(steps)) #Create data table with total steps taken on each day
+print(round(mean(Dfsteptot$totsteps))) #print mean of daily total steps as integer
+print(round(median(Dfsteptot$totsteps))) #print median of daily total steps as integer
+hist(Dfsteptot$totsteps,xlab="Total Steps",main="Distribution of Total Daily Steps") #Create histogram of Total Step Frequency
+```
+
+### Daily Time Interval Walking Data
+
+We extend our analysis to include detail of walking habits in 5 minute time intervals of each day of data collection.  We start by finding the average number of steps taken in any given 5 minute time interval during the course of the data collection.  We then use this information to determine the time of day at which the largest number of steps are taken.  A plot of the time interval data and accompanying calculation are shown below:
+
+```{r, echo=TRUE}
+Dfintmean=ddply(Dfnew,~interval,summarise,meansteps = mean(steps)) #Create data table with total steps taken in a given time interval
+plot(Dfintmean$interval,Dfintmean$meansteps, ylab="Mean Number of Steps", xlab="Minute Interval", type='l') #Plot of Mean Number of Steps vs 5 Minute interval
+print(Dfintmean[Dfintmean$meansteps==max(Dfintmean$meansteps),]$interval) #Report the time interval that contained the largest mean number of steps
+```
+
+### Analysis with Inclusion of missing data
+
+To get a different perspective of the data set, we go back and include all of the missing data in the original set.  The strategy for doing analysis on the missing data is to replace the NA values with the mean number of steps taken in that 5 minute time interal using the present data (which was calculated in the previous section).  Afterward, we recalculate the mean and median total steps by date as well as the step distribution.  
+
+```{r, echo=TRUE}
+TotNa = length(masterdata[is.na(masterdata$steps),1]) #Total Number of NAs in dataset
+NAs=is.na(masterdata$steps) #find the indices of the na values in masterdata
+#Fill in missing values with average steps at that 5 minute interval from other data
+masterdatanew$steps[NAs] <- round(Dfintmean[match(masterdatanew$interval[NAs], Dfintmean$interval),]$meansteps)
+steptot=ddply(masterdatanew,~date,summarise,totsteps=sum(steps)) #Create data table with total steps taken on each day
+print(round(mean(steptot$totsteps))) #print mean of daily total steps as integer
+print(round(median(steptot$totsteps))) #print median of daily total steps as integer
+hist(steptot$totsteps,xlab="Total Steps",main="Distribution of Total Daily Steps") #Create histogram of Total Step Frequency
+```
+The above analysis actually shows that the strategy for imputing the missing data changed the mean and median in a very minor way (mostly because the missing values were replaced by summary statistics)
+
+### Weekday Vs Weekend Walking Activity
+
+The final analysis we do includes a study of the difference in step habits between week day and weekends.  To do this analysis, we create a new variable indicating "weekday" vs "weekend", and we average teh total number of steps taken in any given 5 minute interval across weekdays and weekends.  The plot shown shows the 5 minute time interval walking habits for both weekdays and weekends.  
+
+```{r, echo=TRUE}
+#Assign "weekday" or "weekend" labels to the appropriate date
+masterdatanew$daytype=masterdatanew$steps #create new data column called day type with some values
+masterdatanew[isWeekday(masterdatanew$date, wday=1:5),]$daytype="weekday" #fill in "weekday" for weekday dates
+masterdatanew[!isWeekday(masterdatanew$date, wday=1:5),]$daytype="weekend" #fill in "weekend" for weekend dates
+
+#Average Data over minute interval by day type
+mdat1 = masterdatanew[masterdatanew$daytype=="weekday",]
+mdat2 = masterdatanew[masterdatanew$daytype=="weekend",]
+DtF1 = ddply(mdat1,~interval,summarise,meansteps = round(mean(steps)),daytype="weekday") 
+DtF2 = ddply(mdat2,~interval,summarise,meansteps = round(mean(steps)),daytype="weekend") 
+DtFF = rbind(DtF1,DtF2)
+
+#Create Panel Plot of Results
+
+latplot= xyplot(meansteps~interval|daytype, ## conditional formula to get 2 panels
+       data=DtFF,       ## data
+       type='l',        ## line type for plot
+       groups=daytype,     ## group t0 get differents colors
+       layout=c(1,2))   ## equivalent to par or layout
+       ylab="Mean Total Steps"
+
+print(latplot)
+```
+
+## Conclusions and Closing Remarks
+
+In the previous analysis, we determined some concrete information about the data set in interest.  Specifically, we calculated the mean and median daily steps taken, the time of day at which the largest number of steps are taken on average, and the difference in these numbers when including missing data.  We also provided a variety of exploratory data plots.  In the end, we can make the following conclusions:
+
+1) Inclusion of missing data based on the imputing rule that we chose did little to effect the mean and median daily steps taken.  In both cases the mean and median were around 10765 daily steps.  
+2) The trend in daily steps are quite predictable.  in general, we see very few steps taken during sleeping and relaxation hours (morning and night), and we see a peak of steps taken in the early afternoon.  
+3) When comparing the weekday vs weekend trends, we find that there is much more activity in the middle of the day during the weekend (preditable given that those with office jobs don't do a lot of walking in the middle of the work day).
+
+
+In short, the walking habits of those consumers of fit bit type technology yields fairly intuitive trends on daily walking habits in addition to interesting quantitative information about the actual number of steps taken on different days and at different times.  
